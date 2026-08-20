@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz Result — QuizMaster</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="public-nav">
+  <div class="container">
+    <a href="student-dashboard.html" class="brand"><span class="brand-mark">Q</span> QuizMaster</a>
+    <div class="nav-cta"><a href="#" data-logout class="btn btn-outline btn-sm">Logout</a></div>
+  </div>
+</nav>
+
+<div class="section-tight">
+  <div class="container" style="max-width:720px;">
+
+    <div class="result-hero">
+      <span class="eyebrow">Quiz Completed!</span>
+      <div class="score-stamp" id="scoreStamp" style="margin-top:20px;">
+        <div class="big" id="scoreFraction">–</div>
+        <div class="pct" id="scorePct">–%</div>
+        <div class="verdict" id="scoreVerdict">–</div>
+      </div>
+      <h2 id="quizNameHeading" style="margin-top:6px;">C Programming Basics</h2>
+    </div>
+
+    <div class="result-summary-grid">
+      <div class="cell"><div class="n" style="color:var(--success);" id="sumCorrect">0</div><div class="l">Correct</div></div>
+      <div class="cell"><div class="n" style="color:var(--error);" id="sumWrong">0</div><div class="l">Wrong</div></div>
+      <div class="cell"><div class="n" style="color:var(--neutral);" id="sumUnanswered">0</div><div class="l">Unanswered</div></div>
+    </div>
+
+    <div class="result-actions">
+      <button class="btn btn-outline" id="toggleDetailBtn">View Detailed Answers</button>
+      <a href="quiz.html" class="btn btn-gold">Try Another Quiz</a>
+      <a href="my-results.html" class="btn btn-outline">My Results</a>
+      <a href="student-dashboard.html" class="btn btn-ghost">Dashboard</a>
+    </div>
+
+    <div id="detailSection" style="display:none; margin-top:34px;">
+      <div class="section-head" style="margin-bottom:20px;">
+        <span class="eyebrow">Answer Review</span>
+        <h2 style="font-size:22px;">Question-by-question breakdown</h2>
+      </div>
+      <div id="detailList"></div>
+    </div>
+
+  </div>
+</div>
+
+<script src="js/script.js"></script>
+<script>
+QM.auth.requireStudent();
+
+const raw = sessionStorage.getItem("qm_last_result");
+if (!raw) {
+  window.location.href = "my-results.html";
+} else {
+  const result = JSON.parse(raw);
+  const quizName = sessionStorage.getItem("qm_last_quiz_name") || "Quiz";
+  document.getElementById("quizNameHeading").textContent = quizName;
+
+  const pct = result.percentage;
+  const passed = pct >= 40;
+  document.getElementById("scoreStamp").classList.toggle("fail", !passed);
+  document.getElementById("scoreFraction").textContent = `${result.correct}/${result.total}`;
+  document.getElementById("scorePct").textContent = `${pct.toFixed(1)}%`;
+
+  let verdict = "Needs Improvement";
+  if (pct >= 85) verdict = "Excellent";
+  else if (pct >= 60) verdict = "Good";
+  document.getElementById("scoreVerdict").textContent = verdict;
+
+  document.getElementById("sumCorrect").textContent = result.correct;
+  document.getElementById("sumWrong").textContent = result.wrong;
+  document.getElementById("sumUnanswered").textContent = result.unanswered;
+
+  const detailList = document.getElementById("detailList");
+  detailList.innerHTML = result.details.map((d, i) => `
+    <div class="answer-review ${d.isCorrect ? "" : "wrong"}">
+      <div class="aq-top">
+        <div>
+          <div class="aq-num">Question ${i + 1}</div>
+          <h4>${QM.escapeHtml(d.question)}</h4>
+        </div>
+        <span class="badge ${d.isCorrect ? "pass" : "fail"}">${d.isCorrect ? "✓ Correct" : "✗ Incorrect"}</span>
+      </div>
+      <div class="aq-answers">
+        <div><span class="lab">Your Answer:</span><span class="val your-val">${d.yourAnswer || "Not answered"}</span></div>
+        <div><span class="lab">Correct Answer:</span><span class="val">${d.correctAnswer}</span></div>
+      </div>
+    </div>`).join("");
+
+  document.getElementById("toggleDetailBtn").addEventListener("click", (e) => {
+    const section = document.getElementById("detailSection");
+    const show = section.style.display === "none";
+    section.style.display = show ? "block" : "none";
+    e.target.textContent = show ? "Hide Detailed Answers" : "View Detailed Answers";
+    if (show) section.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+}
+</script>
+</body>
+</html>

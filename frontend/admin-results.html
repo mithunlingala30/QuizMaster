@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Results — QuizMaster Admin</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app-shell">
+  <aside class="sidebar">
+    <a href="admin-dashboard.html" class="brand"><span class="brand-mark">Q</span> QuizMaster</a>
+    <div class="sidebar-role">Admin Panel</div>
+    <ul class="side-nav">
+      <li><a href="admin-dashboard.html"><span class="ic">▤</span> Dashboard</a></li>
+      <li><a href="manage-questions.html"><span class="ic">▦</span> Manage Questions</a></li>
+      <li><a href="add-question.html"><span class="ic">✎</span> Add Question</a></li>
+      <li><a href="students.html"><span class="ic">◐</span> Students</a></li>
+      <li><a href="admin-results.html" class="active"><span class="ic">📈</span> Results</a></li>
+    </ul>
+    <div class="sidebar-foot">
+      <a href="#" data-logout style="display:flex; align-items:center; gap:10px; padding:11px 14px; color:rgba(247,244,236,0.72); font-size:14.5px;"><span class="ic">⏻</span> Logout</a>
+    </div>
+  </aside>
+
+  <div class="main-col">
+    <header class="topbar">
+      <div style="display:flex; align-items:center; gap:14px;"><button class="menu-toggle">☰</button><h2>Results</h2></div>
+    </header>
+
+    <main class="content">
+      <div class="panel">
+        <div class="panel-head" style="flex-wrap:wrap; gap:12px;">
+          <h3>All Quiz Results</h3>
+          <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <input type="text" id="searchBox" placeholder="Search student…" style="padding:9px 14px; border:1.5px solid var(--border-dark); border-radius:999px; font-size:13.5px; width:180px;">
+            <select id="quizFilter" style="padding:9px 14px; border:1.5px solid var(--border-dark); border-radius:999px; font-size:13.5px;">
+              <option value="">All Quizzes</option>
+            </select>
+            <select id="sortSelect" style="padding:9px 14px; border:1.5px solid var(--border-dark); border-radius:999px; font-size:13.5px;">
+              <option value="date-desc">Newest First</option>
+              <option value="score-desc">Highest Score</option>
+              <option value="score-asc">Lowest Score</option>
+            </select>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Student</th><th>Quiz</th><th>Date</th><th>Score</th><th>Percentage</th><th>Status</th></tr></thead>
+            <tbody id="rBody"><tr><td colspan="6"><div class="skeleton" style="height:18px;"></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="js/script.js"></script>
+<script>
+let allResults = [];
+
+function applyFiltersAndRender() {
+  const term = document.getElementById("searchBox").value.toLowerCase();
+  const quiz = document.getElementById("quizFilter").value;
+  const sort = document.getElementById("sortSelect").value;
+
+  let list = allResults.filter(r =>
+    r.username.toLowerCase().includes(term) && (!quiz || r.quizName === quiz)
+  );
+
+  if (sort === "score-desc") list.sort((a, b) => b.percentage - a.percentage);
+  else if (sort === "score-asc") list.sort((a, b) => a.percentage - b.percentage);
+  else list = list.slice().reverse(); // newest first (append order)
+
+  const body = document.getElementById("rBody");
+  if (!list.length) {
+    body.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="em-icon">📈</div><h4>No results found</h4><p>Try adjusting your search or filters.</p></div></td></tr>`;
+    return;
+  }
+  body.innerHTML = list.map(r => {
+    const pct = parseFloat(r.percentage);
+    const passed = pct >= 40;
+    return `<tr>
+      <td>${QM.escapeHtml(r.username)}</td>
+      <td>${QM.escapeHtml(r.quizName)}</td>
+      <td>${r.date}</td>
+      <td>${r.correct}/${r.total}</td>
+      <td>${pct.toFixed(1)}%</td>
+      <td><span class="badge ${passed ? "pass" : "fail"}">${passed ? "Passed" : "Failed"}</span></td>
+    </tr>`;
+  }).join("");
+}
+
+if (QM.auth.requireAdmin()) {
+  (async () => {
+    try {
+      allResults = await QM.apiGet("get_results");
+      const quizzes = [...new Set(allResults.map(r => r.quizName))];
+      const quizFilter = document.getElementById("quizFilter");
+      quizzes.forEach(q => {
+        const opt = document.createElement("option");
+        opt.value = q; opt.textContent = q;
+        quizFilter.appendChild(opt);
+      });
+      applyFiltersAndRender();
+    } catch (err) {
+      QM.toast("Could not load results from the server.", "error");
+    }
+  })();
+
+  ["searchBox", "quizFilter", "sortSelect"].forEach(id =>
+    document.getElementById(id).addEventListener("input", applyFiltersAndRender)
+  );
+}
+</script>
+</body>
+</html>

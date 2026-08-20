@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Create Account — QuizMaster</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="public-nav">
+  <div class="container">
+    <a href="index.html" class="brand"><span class="brand-mark">Q</span> QuizMaster</a>
+    <div class="nav-cta"><a href="login.html" class="btn btn-outline btn-sm">Login</a></div>
+  </div>
+</nav>
+
+<div class="auth-wrap">
+  <div class="auth-card wide">
+    <h1>Create your student account</h1>
+    <p class="sub">Register once to attempt quizzes and track your results.</p>
+
+    <div class="form-alert error" id="formAlert"></div>
+
+    <form id="registerForm" novalidate>
+      <div class="field-row">
+        <div class="field" id="f-name">
+          <label for="name">Full Name</label>
+          <input type="text" id="name" name="name" placeholder="e.g. Aditi Sharma">
+          <div class="error-msg">Full name is required.</div>
+        </div>
+        <div class="field" id="f-studentId">
+          <label for="studentId">Student ID</label>
+          <input type="text" id="studentId" name="studentId" placeholder="e.g. 1005">
+          <div class="error-msg">Enter a valid numeric student ID.</div>
+        </div>
+      </div>
+
+      <div class="field" id="f-email">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" placeholder="you@example.com">
+        <div class="error-msg">Enter a valid email address.</div>
+      </div>
+
+      <div class="field" id="f-username">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" placeholder="Choose a unique username">
+        <div class="error-msg">Username is required.</div>
+      </div>
+
+      <div class="field-row">
+        <div class="field" id="f-password">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" placeholder="Min. 6 characters">
+          <div class="error-msg">Password must be at least 6 characters.</div>
+        </div>
+        <div class="field" id="f-confirm">
+          <label for="confirmPassword">Confirm Password</label>
+          <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Re-enter password">
+          <div class="error-msg">Passwords do not match.</div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block" id="submitBtn">Create Account</button>
+    </form>
+
+    <p class="auth-foot">Already have an account? <a href="login.html">Log in</a></p>
+    <div class="demo-note">Demo tip: registered accounts are stored in data/users.txt by student_register.c and can immediately be used to log in.</div>
+  </div>
+</div>
+
+<script src="js/script.js"></script>
+<script>
+const form = document.getElementById("registerForm");
+const alertBox = document.getElementById("formAlert");
+const submitBtn = document.getElementById("submitBtn");
+
+function setInvalid(id, invalid) {
+  document.getElementById("f-" + id).classList.toggle("invalid", invalid);
+}
+
+function validate(data) {
+  let ok = true;
+  if (!data.name.trim()) { setInvalid("name", true); ok = false; } else setInvalid("name", false);
+  if (!/^[0-9]+$/.test(data.studentId.trim())) { setInvalid("studentId", true); ok = false; } else setInvalid("studentId", false);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email.trim())) { setInvalid("email", true); ok = false; } else setInvalid("email", false);
+  if (!data.username.trim()) { setInvalid("username", true); ok = false; } else setInvalid("username", false);
+  if (data.password.length < 6) { setInvalid("password", true); ok = false; } else setInvalid("password", false);
+  if (data.password !== data.confirmPassword) { setInvalid("confirm", true); ok = false; } else setInvalid("confirm", false);
+  return ok;
+}
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  alertBox.classList.remove("show");
+
+  const data = {
+    name: form.name.value, studentId: form.studentId.value, email: form.email.value,
+    username: form.username.value, password: form.password.value, confirmPassword: form.confirmPassword.value
+  };
+
+  if (!validate(data)) {
+    alertBox.textContent = "Please fix the highlighted fields.";
+    alertBox.classList.add("show");
+    return;
+  }
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Creating account…";
+  try {
+    const res = await QM.api("student_register", data);
+    if (res.success) {
+      QM.toast(res.message, "success");
+      setTimeout(() => window.location.href = "login.html", 900);
+    } else {
+      alertBox.textContent = res.message || "Registration failed.";
+      alertBox.classList.add("show");
+    }
+  } catch (err) {
+    alertBox.textContent = "Could not reach the server. Is the CGI backend running?";
+    alertBox.classList.add("show");
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Create Account";
+  }
+});
+</script>
+</body>
+</html>

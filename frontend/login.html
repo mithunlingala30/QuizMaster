@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Login — QuizMaster</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="public-nav">
+  <div class="container">
+    <a href="index.html" class="brand"><span class="brand-mark">Q</span> QuizMaster</a>
+    <div class="nav-cta"><a href="register.html" class="btn btn-outline btn-sm">Create Account</a></div>
+  </div>
+</nav>
+
+<div class="auth-wrap">
+  <div class="auth-card">
+    <h1>Welcome back</h1>
+    <p class="sub">Log in to attempt quizzes and view your results.</p>
+
+    <div class="form-alert error" id="formAlert"></div>
+
+    <form id="loginForm" novalidate>
+      <div class="field" id="f-username">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" placeholder="e.g. student01">
+        <div class="error-msg">Username is required.</div>
+      </div>
+      <div class="field" id="f-password">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" placeholder="Your password">
+        <div class="error-msg">Password is required.</div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block" id="submitBtn">Login</button>
+
+      <div class="auth-links">
+        <a href="register.html">Create Account</a>
+        <a href="#" id="forgotLink">Forgot Password</a>
+      </div>
+    </form>
+
+    <p class="auth-foot">Are you an administrator? <a href="admin-login.html">Admin Login</a></p>
+    <div class="demo-note">Demo accounts: student01 / student02 / student03 — password: pass123</div>
+  </div>
+</div>
+
+<script src="js/script.js"></script>
+<script>
+const form = document.getElementById("loginForm");
+const alertBox = document.getElementById("formAlert");
+const submitBtn = document.getElementById("submitBtn");
+
+document.getElementById("forgotLink").addEventListener("click", (e) => {
+  e.preventDefault();
+  QM.toast("Please contact your administrator to reset your password.");
+});
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  alertBox.classList.remove("show");
+
+  const username = form.username.value.trim();
+  const password = form.password.value;
+  document.getElementById("f-username").classList.toggle("invalid", !username);
+  document.getElementById("f-password").classList.toggle("invalid", !password);
+  if (!username || !password) {
+    alertBox.textContent = "Please enter your username and password.";
+    alertBox.classList.add("show");
+    return;
+  }
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Logging in…";
+  try {
+    const res = await QM.api("student_login", { username, password });
+    if (res.success) {
+      QM.auth.setStudent({ studentId: res.studentId, name: res.name, username: res.username });
+      window.location.href = "student-dashboard.html";
+    } else {
+      alertBox.textContent = res.message || "Login failed.";
+      alertBox.classList.add("show");
+    }
+  } catch (err) {
+    alertBox.textContent = "Could not reach the server. Is the CGI backend running?";
+    alertBox.classList.add("show");
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Login";
+  }
+});
+</script>
+</body>
+</html>

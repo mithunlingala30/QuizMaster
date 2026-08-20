@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Login — QuizMaster</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<nav class="public-nav">
+  <div class="container">
+    <a href="index.html" class="brand"><span class="brand-mark">Q</span> QuizMaster</a>
+    <div class="nav-cta"><a href="login.html" class="btn btn-outline btn-sm">Student Login</a></div>
+  </div>
+</nav>
+
+<div class="auth-wrap">
+  <div class="auth-card">
+    <span class="auth-admin-badge">🔒 Administrator</span>
+    <h1>Admin Login</h1>
+    <p class="sub">Restricted access — manage questions, students, and results.</p>
+
+    <div class="form-alert error" id="formAlert"></div>
+
+    <form id="adminLoginForm" novalidate>
+      <div class="field" id="f-username">
+        <label for="username">Admin Username</label>
+        <input type="text" id="username" name="username" placeholder="Admin username">
+        <div class="error-msg">Username is required.</div>
+      </div>
+      <div class="field" id="f-password">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" placeholder="Password">
+        <div class="error-msg">Password is required.</div>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block" id="submitBtn">Login as Admin</button>
+    </form>
+
+    <p class="auth-foot"><a href="index.html">← Back to home</a></p>
+    <div class="demo-note">Demo admin credentials: admin / admin123 — validated server-side against data/admin.txt only. Nothing is exposed in this page's JavaScript.</div>
+  </div>
+</div>
+
+<script src="js/script.js"></script>
+<script>
+const form = document.getElementById("adminLoginForm");
+const alertBox = document.getElementById("formAlert");
+const submitBtn = document.getElementById("submitBtn");
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  alertBox.classList.remove("show");
+
+  const username = form.username.value.trim();
+  const password = form.password.value;
+  document.getElementById("f-username").classList.toggle("invalid", !username);
+  document.getElementById("f-password").classList.toggle("invalid", !password);
+  if (!username || !password) {
+    alertBox.textContent = "Please enter the admin username and password.";
+    alertBox.classList.add("show");
+    return;
+  }
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Verifying…";
+  try {
+    const res = await QM.api("admin_login", { username, password });
+    if (res.success) {
+      QM.auth.setAdmin();
+      window.location.href = "admin-dashboard.html";
+    } else {
+      alertBox.textContent = res.message || "Invalid credentials.";
+      alertBox.classList.add("show");
+    }
+  } catch (err) {
+    alertBox.textContent = "Could not reach the server. Is the CGI backend running?";
+    alertBox.classList.add("show");
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = "Login as Admin";
+  }
+});
+</script>
+</body>
+</html>

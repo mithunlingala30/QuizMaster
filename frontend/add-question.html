@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Add Question — QuizMaster</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app-shell">
+  <aside class="sidebar">
+    <a href="admin-dashboard.html" class="brand"><span class="brand-mark">Q</span> QuizMaster</a>
+    <div class="sidebar-role">Admin Panel</div>
+    <ul class="side-nav">
+      <li><a href="admin-dashboard.html"><span class="ic">▤</span> Dashboard</a></li>
+      <li><a href="manage-questions.html"><span class="ic">▦</span> Manage Questions</a></li>
+      <li><a href="add-question.html" class="active"><span class="ic">✎</span> Add Question</a></li>
+      <li><a href="students.html"><span class="ic">◐</span> Students</a></li>
+      <li><a href="admin-results.html"><span class="ic">📈</span> Results</a></li>
+    </ul>
+    <div class="sidebar-foot">
+      <a href="#" data-logout style="display:flex; align-items:center; gap:10px; padding:11px 14px; color:rgba(247,244,236,0.72); font-size:14.5px;"><span class="ic">⏻</span> Logout</a>
+    </div>
+  </aside>
+
+  <div class="main-col">
+    <header class="topbar">
+      <div style="display:flex; align-items:center; gap:14px;"><button class="menu-toggle">☰</button><h2>Add Question</h2></div>
+      <div class="topbar-right"><a href="manage-questions.html" class="btn btn-outline btn-sm">View All Questions</a></div>
+    </header>
+
+    <main class="content content-narrow">
+      <div class="form-alert error" id="formAlert"></div>
+      <div class="panel">
+        <form id="addForm" novalidate>
+          <div class="field" id="f-question">
+            <label for="question">Question</label>
+            <textarea id="question" name="question" rows="3" placeholder="e.g. What is the purpose of fopen()?"></textarea>
+            <div class="error-msg">Question text is required.</div>
+          </div>
+
+          <div class="field-row">
+            <div class="field" id="f-optionA"><label for="optionA">Option A</label><input type="text" id="optionA" name="optionA" placeholder="Open a file"><div class="error-msg">Required.</div></div>
+            <div class="field" id="f-optionB"><label for="optionB">Option B</label><input type="text" id="optionB" name="optionB" placeholder="Close a file"><div class="error-msg">Required.</div></div>
+          </div>
+          <div class="field-row">
+            <div class="field" id="f-optionC"><label for="optionC">Option C</label><input type="text" id="optionC" name="optionC" placeholder="Delete a file"><div class="error-msg">Required.</div></div>
+            <div class="field" id="f-optionD"><label for="optionD">Option D</label><input type="text" id="optionD" name="optionD" placeholder="Rename a file"><div class="error-msg">Required.</div></div>
+          </div>
+
+          <div class="field-row">
+            <div class="field" id="f-correctAnswer">
+              <label for="correctAnswer">Correct Answer</label>
+              <select id="correctAnswer" name="correctAnswer">
+                <option value="">Select…</option>
+                <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option>
+              </select>
+              <div class="error-msg">Please select the correct option.</div>
+            </div>
+            <div class="field" id="f-marks">
+              <label for="marks">Marks</label>
+              <input type="number" id="marks" name="marks" value="1" min="1">
+            </div>
+          </div>
+
+          <div class="field-row">
+            <div class="field" id="f-category">
+              <label for="category">Category</label>
+              <input type="text" id="category" name="category" placeholder="e.g. File Handling">
+              <div class="error-msg">Category is required.</div>
+            </div>
+            <div class="field" id="f-difficulty">
+              <label for="difficulty">Difficulty</label>
+              <select id="difficulty" name="difficulty">
+                <option value="Easy">Easy</option>
+                <option value="Medium">Medium</option>
+                <option value="Hard">Hard</option>
+              </select>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary" id="submitBtn">Add Question</button>
+        </form>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="js/script.js"></script>
+<script>
+if (QM.auth.requireAdmin()) {
+  const form = document.getElementById("addForm");
+  const alertBox = document.getElementById("formAlert");
+  const submitBtn = document.getElementById("submitBtn");
+
+  function setInvalid(id, invalid) { document.getElementById("f-" + id).classList.toggle("invalid", invalid); }
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    alertBox.classList.remove("show");
+
+    const data = {
+      question: form.question.value.trim(), optionA: form.optionA.value.trim(), optionB: form.optionB.value.trim(),
+      optionC: form.optionC.value.trim(), optionD: form.optionD.value.trim(), correctAnswer: form.correctAnswer.value,
+      category: form.category.value.trim(), difficulty: form.difficulty.value, marks: form.marks.value
+    };
+
+    let ok = true;
+    ["question", "optionA", "optionB", "optionC", "optionD"].forEach(k => {
+      const invalid = !data[k]; setInvalid(k, invalid); if (invalid) ok = false;
+    });
+    setInvalid("correctAnswer", !data.correctAnswer); if (!data.correctAnswer) ok = false;
+    setInvalid("category", !data.category); if (!data.category) ok = false;
+
+    if (!ok) { alertBox.textContent = "Please fill in all required fields."; alertBox.classList.add("show"); return; }
+
+    submitBtn.disabled = true; submitBtn.textContent = "Adding…";
+    try {
+      const res = await QM.api("add_question", data);
+      if (res.success) {
+        QM.toast("Question added successfully.", "success");
+        form.reset();
+        form.marks.value = 1;
+      } else {
+        alertBox.textContent = res.message || "Could not add question.";
+        alertBox.classList.add("show");
+      }
+    } catch (err) {
+      alertBox.textContent = "Could not reach the server.";
+      alertBox.classList.add("show");
+    } finally {
+      submitBtn.disabled = false; submitBtn.textContent = "Add Question";
+    }
+  });
+}
+</script>
+</body>
+</html>

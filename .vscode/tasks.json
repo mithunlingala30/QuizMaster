@@ -1,0 +1,71 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "1. Build QuizMaster (compile C backend + stage frontend)",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "mkdir -p run/cgi-bin run/data && cp frontend/*.html run/ && cp -r frontend/css frontend/js run/ && cp data/*.txt run/data/ && cd backend && for f in *.c; do gcc -Wall -o ../run/cgi-bin/${f%.c} \"$f\"; done && chmod +x ../run/cgi-bin/* && echo BUILD_OK"
+      ],
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": ["$gcc"],
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true }
+    },
+    {
+      "label": "2. Run QuizMaster server (http://localhost:8000)",
+      "type": "shell",
+      "command": "bash",
+      "args": ["-c", "cd run && python3 -m http.server 8000 --cgi"],
+      "dependsOn": "1. Build QuizMaster (compile C backend + stage frontend)",
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": { "regexp": "." , "file": 1, "location": 2, "message": 3 },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Serving HTTP",
+          "endsPattern": "Serving HTTP"
+        }
+      },
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "3. Rebuild after editing a .c file",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-c",
+        "cd backend && for f in *.c; do gcc -Wall -o ../run/cgi-bin/${f%.c} \"$f\"; done && echo REBUILD_OK (refresh the browser, no need to restart the server)"
+      ],
+      "problemMatcher": ["$gcc"],
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true }
+    },
+    {
+      "label": "4. [DEV ONLY] Install FastAPI mock-backend deps (Windows-friendly)",
+      "type": "shell",
+      "command": "python",
+      "args": ["-m", "pip", "install", "-r", "requirements.txt"],
+      "options": { "cwd": "${workspaceFolder}/dev-server" },
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true }
+    },
+    {
+      "label": "5. [DEV ONLY] Run FastAPI mock backend (http://localhost:8000, no gcc/WSL needed)",
+      "type": "shell",
+      "command": "python",
+      "args": ["-m", "uvicorn", "app:app", "--reload", "--port", "8000"],
+      "options": { "cwd": "${workspaceFolder}/dev-server" },
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": { "regexp": ".", "file": 1, "location": 2, "message": 3 },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Started server process",
+          "endsPattern": "Application startup complete"
+        }
+      },
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    }
+  ]
+}

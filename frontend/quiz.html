@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Take Quiz — QuizMaster</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ============ SELECTION VIEW ============ -->
+<div id="selectView">
+  <nav class="public-nav">
+    <div class="container">
+      <a href="student-dashboard.html" class="brand"><span class="brand-mark">Q</span> QuizMaster</a>
+      <div class="nav-cta">
+        <a href="student-dashboard.html" class="btn btn-ghost btn-sm">← Dashboard</a>
+        <a href="#" data-logout class="btn btn-outline btn-sm">Logout</a>
+      </div>
+    </div>
+  </nav>
+  <div class="section-tight">
+    <div class="container" style="max-width:900px;">
+      <div class="section-head">
+        <span class="eyebrow">Available Quizzes</span>
+        <h2>Pick a quiz to begin</h2>
+        <p>Once started, the timer begins immediately — make sure you're ready.</p>
+      </div>
+      <div id="quizCards">
+        <div class="skeleton" style="height:140px; border-radius:22px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ATTEMPT VIEW ============ -->
+<div id="attemptView" style="display:none;">
+  <div class="quiz-top">
+    <div class="container">
+      <div>
+        <h2 id="quizTitle">C Programming Basics</h2>
+        <span id="qCounter" style="font-family:var(--font-mono); font-size:13px; color:rgba(247,244,236,0.7);">Question 1 of 10</span>
+      </div>
+      <div class="quiz-progress-wrap">
+        <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%;"></div></div>
+      </div>
+      <div class="timer" id="timer">10:00</div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="quiz-body">
+      <div>
+        <div class="question-card">
+          <span class="eyebrow q-eyebrow" id="qCategory">Category</span>
+          <h3 id="qText">Loading question…</h3>
+          <div id="qOptions"></div>
+        </div>
+        <div class="q-nav-actions">
+          <button class="btn btn-outline" id="prevBtn">← Previous</button>
+          <div style="display:flex; gap:12px;">
+            <button class="btn btn-outline" id="nextBtn">Next →</button>
+            <button class="btn btn-gold" id="submitBtn" style="display:none;">Submit Quiz</button>
+          </div>
+        </div>
+      </div>
+
+      <aside class="side-panel">
+        <h4>Question Navigator</h4>
+        <div class="q-grid" id="qGrid"></div>
+        <div class="legend">
+          <div><span class="dot answered-c"></span> Answered</div>
+          <div><span class="dot current-c"></span> Current</div>
+          <div><span class="dot unanswered"></span> Unanswered</div>
+        </div>
+        <button class="btn btn-gold btn-block" id="submitBtnSide" style="margin-top:18px;">Submit Quiz</button>
+      </aside>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="submitModal">
+  <div class="modal-box">
+    <div class="m-icon">!</div>
+    <h3>Submit this quiz?</h3>
+    <p id="submitModalText">Are you sure you want to submit the quiz? You won't be able to change your answers afterwards.</p>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="cancelSubmit">Keep Reviewing</button>
+      <button class="btn btn-gold" id="confirmSubmit">Yes, Submit</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/script.js"></script>
+<script>
+const student = QM.auth.requireStudent();
+let questions = [];
+let answers = {};       // { questionId: 'A' }
+let current = 0;
+let secondsLeft = 0;
+let timerInterval = null;
+const QUIZ_NAME = "C Programming Basics";
+const SECONDS_PER_Q = 60;
+
+async function loadSelection() {
+  try {
+    questions = await QM.apiGet("get_questions");
+  } catch (err) {
+    document.getElementById("quizCards").innerHTML = `<div class="empty-state"><h4>Could not load quizzes</h4><p>Check that the CGI backend is running.</p></div>`;
+    return;
+  }
+  const n = questions.length;
+  const minutes = Math.max(1, Math.round(n * SECONDS_PER_Q / 60));
+  document.getElementById("quizCards").innerHTML = n === 0 ? `
+    <div class="empty-state"><div class="em-icon">▦</div><h4>No questions available yet</h4><p>Please check back once the admin has added questions.</p></div>
+  ` : `
+    <div class="quiz-card">
+      <div class="quiz-card-top">
+        <div>
+          <h3>${QUIZ_NAME}</h3>
+          <div class="quiz-meta" style="margin-top:8px;">
+            <span>${n} Questions</span><span>${minutes} Minutes</span><span>Mixed Difficulty</span>
+          </div>
+        </div>
+        <span class="badge easy">Easy–Medium</span>
+      </div>
+      <p style="color:var(--neutral); font-size:14.5px;">Covers variables, operators, control flow, functions, arrays, pointers, structures, and file handling.</p>
+      <button class="btn btn-gold" id="startQuizBtn" style="align-self:flex-start;">Start Quiz</button>
+    </div>`;
+  document.getElementById("startQuizBtn")?.addEventListener("click", startQuiz);
+}
+
+function startQuiz() {
+  document.getElementById("selectView").style.display = "none";
+  document.getElementById("attemptView").style.display = "block";
+  document.getElementById("qGrid").innerHTML = questions.map((q, i) =>
+    `<div class="q-dot" data-idx="${i}">${i + 1}</div>`).join("");
+  document.querySelectorAll(".q-dot").forEach(dot => {
+    dot.addEventListener("click", () => { current = parseInt(dot.dataset.idx); renderQuestion(); });
+  });
+  secondsLeft = questions.length * SECONDS_PER_Q;
+  timerInterval = setInterval(tick, 1000);
+  renderQuestion();
+  tick();
+}
+
+function tick() {
+  const timerEl = document.getElementById("timer");
+  const m = Math.floor(secondsLeft / 60), s = secondsLeft % 60;
+  timerEl.textContent = `${m}:${s.toString().padStart(2, "0")}`;
+  timerEl.classList.toggle("low", secondsLeft <= 60);
+  if (secondsLeft <= 0) {
+    clearInterval(timerInterval);
+    QM.toast("Time's up! Submitting your quiz…", "error");
+    submitQuiz();
+    return;
+  }
+  secondsLeft--;
+}
+
+function renderQuestion() {
+  const q = questions[current];
+  document.getElementById("qCounter").textContent = `Question ${current + 1} of ${questions.length}`;
+  document.getElementById("qCategory").textContent = q.category || "General";
+  document.getElementById("qText").textContent = q.question;
+  document.getElementById("progressFill").style.width = `${((current + 1) / questions.length) * 100}%`;
+
+  const opts = [["A", q.optionA], ["B", q.optionB], ["C", q.optionC], ["D", q.optionD]];
+  document.getElementById("qOptions").innerHTML = opts.map(([letter, text]) => {
+    const selected = answers[q.id] === letter;
+    return `<label class="option ${selected ? "selected" : ""}" data-letter="${letter}">
+      <span class="opt-letter">${letter}</span>
+      <input type="radio" name="opt" ${selected ? "checked" : ""} style="display:none;">
+      <span>${QM.escapeHtml(text)}</span>
+    </label>`;
+  }).join("");
+
+  document.querySelectorAll("#qOptions .option").forEach(opt => {
+    opt.addEventListener("click", () => {
+      answers[q.id] = opt.dataset.letter;
+      renderQuestion();
+      updateGrid();
+    });
+  });
+
+  document.getElementById("prevBtn").disabled = current === 0;
+  const isLast = current === questions.length - 1;
+  document.getElementById("nextBtn").style.display = isLast ? "none" : "inline-flex";
+  document.getElementById("submitBtn").style.display = isLast ? "inline-flex" : "none";
+
+  document.querySelectorAll(".q-dot").forEach((dot, i) => {
+    dot.classList.toggle("current", i === current);
+  });
+}
+
+function updateGrid() {
+  document.querySelectorAll(".q-dot").forEach((dot, i) => {
+    const q = questions[i];
+    dot.classList.toggle("answered", !!answers[q.id] && i !== current);
+  });
+}
+
+document.getElementById("prevBtn").addEventListener("click", () => { if (current > 0) { current--; renderQuestion(); } });
+document.getElementById("nextBtn").addEventListener("click", () => { if (current < questions.length - 1) { current++; renderQuestion(); } });
+
+function openSubmitModal() {
+  const answeredCount = Object.keys(answers).length;
+  const unanswered = questions.length - answeredCount;
+  document.getElementById("submitModalText").textContent = unanswered > 0
+    ? `You have ${unanswered} unanswered question(s). Are you sure you want to submit the quiz?`
+    : `Are you sure you want to submit the quiz? You won't be able to change your answers afterwards.`;
+  document.getElementById("submitModal").classList.add("show");
+}
+document.getElementById("submitBtn").addEventListener("click", openSubmitModal);
+document.getElementById("submitBtnSide").addEventListener("click", openSubmitModal);
+document.getElementById("cancelSubmit").addEventListener("click", () => document.getElementById("submitModal").classList.remove("show"));
+document.getElementById("confirmSubmit").addEventListener("click", () => { document.getElementById("submitModal").classList.remove("show"); submitQuiz(); });
+
+async function submitQuiz() {
+  clearInterval(timerInterval);
+  const answerStr = questions.map(q => `${q.id}:${answers[q.id] || ""}`).join(",");
+  try {
+    const res = await QM.api("submit_quiz", { username: student.username, quizName: QUIZ_NAME, answers: answerStr });
+    if (res.success) {
+      sessionStorage.setItem("qm_last_result", JSON.stringify(res));
+      sessionStorage.setItem("qm_last_quiz_name", QUIZ_NAME);
+      window.location.href = "result.html";
+    } else {
+      QM.toast(res.message || "Could not submit quiz.", "error");
+    }
+  } catch (err) {
+    QM.toast("Could not reach the server to submit your quiz.", "error");
+  }
+}
+
+if (student) loadSelection();
+</script>
+</body>
+</html>

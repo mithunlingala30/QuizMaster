@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — QuizMaster</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app-shell">
+  <aside class="sidebar">
+    <a href="student-dashboard.html" class="brand"><span class="brand-mark">Q</span> QuizMaster</a>
+    <div class="sidebar-role">Student Panel</div>
+    <ul class="side-nav">
+      <li><a href="student-dashboard.html"><span class="ic">▤</span> Dashboard</a></li>
+      <li><a href="quiz.html"><span class="ic">✎</span> Take Quiz</a></li>
+      <li><a href="my-results.html"><span class="ic">▦</span> My Results</a></li>
+      <li><a href="student-dashboard.html#profile"><span class="ic">●</span> Profile</a></li>
+    </ul>
+    <div class="sidebar-foot">
+      <a href="#" data-logout style="display:flex; align-items:center; gap:10px; padding:11px 14px; color:rgba(247,244,236,0.72); font-size:14.5px;">
+        <span class="ic" style="font-family:var(--font-mono);">⏻</span> Logout
+      </a>
+    </div>
+  </aside>
+
+  <div class="main-col">
+    <header class="topbar">
+      <div style="display:flex; align-items:center; gap:14px;">
+        <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+        <h2>Dashboard</h2>
+      </div>
+      <div class="topbar-right">
+        <div class="user-chip">
+          <div class="avatar" id="avatarInit">S</div>
+          <span class="uname" id="studentNameChip">Student</span>
+        </div>
+        <a href="#" data-logout class="btn btn-outline btn-sm">Logout</a>
+      </div>
+    </header>
+
+    <main class="content">
+      <h2 style="margin-bottom:6px;">Welcome back, <span id="welcomeName">Student</span>!</h2>
+      <p style="color:var(--neutral); margin-bottom:26px;">Here's a quick look at your quiz activity.</p>
+
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-label">Quizzes Available</div><div class="stat-value" id="statAvailable">–</div></div>
+        <div class="stat-card"><div class="stat-label">Quizzes Attempted</div><div class="stat-value gold" id="statAttempted">–</div></div>
+        <div class="stat-card"><div class="stat-label">Average Score</div><div class="stat-value" id="statAverage">–</div></div>
+        <div class="stat-card"><div class="stat-label">Best Score</div><div class="stat-value success" id="statBest">–</div></div>
+      </div>
+
+      <div class="panel" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:16px; background:var(--ink); border:none;">
+        <div>
+          <h3 style="color:#fff; font-size:19px;">Ready for a new quiz?</h3>
+          <p style="color:rgba(247,244,236,0.72); margin-top:4px; font-size:14.5px;">Jump into the available quiz and get graded instantly.</p>
+        </div>
+        <a href="quiz.html" class="btn btn-gold">Start Quiz</a>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Recent Results</h3>
+          <a href="my-results.html" class="btn btn-ghost btn-sm">View all →</a>
+        </div>
+        <div class="table-wrap" id="resultsTableWrap">
+          <table class="data-table">
+            <thead><tr><th>Quiz Name</th><th>Date</th><th>Score</th><th>Percentage</th><th>Status</th><th></th></tr></thead>
+            <tbody id="resultsBody">
+              <tr><td colspan="6"><div class="skeleton" style="height:18px;"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel" id="profile">
+        <div class="panel-head"><h3>Profile</h3></div>
+        <div class="grid-2" id="profileGrid" style="gap:14px;">
+          <div><div class="stat-label">Full Name</div><div style="margin-top:4px; font-weight:600;" id="pName">–</div></div>
+          <div><div class="stat-label">Student ID</div><div style="margin-top:4px; font-weight:600;" id="pId">–</div></div>
+          <div><div class="stat-label">Username</div><div style="margin-top:4px; font-weight:600;" id="pUsername">–</div></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="js/script.js"></script>
+<script>
+const student = QM.auth.requireStudent();
+
+if (student) {
+  document.getElementById("welcomeName").textContent = student.name;
+  document.getElementById("studentNameChip").textContent = student.name;
+  document.getElementById("avatarInit").textContent = student.name.charAt(0).toUpperCase();
+  document.getElementById("pName").textContent = student.name;
+  document.getElementById("pId").textContent = student.studentId;
+  document.getElementById("pUsername").textContent = student.username;
+
+  (async () => {
+    try {
+      const [questions, results] = await Promise.all([
+        QM.apiGet("get_questions"),
+        QM.apiGet("get_results", { username: student.username })
+      ]);
+
+      document.getElementById("statAvailable").textContent = questions.length > 0 ? "1" : "0";
+      document.getElementById("statAttempted").textContent = results.length;
+
+      let avg = 0, best = 0;
+      if (results.length) {
+        avg = results.reduce((s, r) => s + parseFloat(r.percentage), 0) / results.length;
+        best = Math.max(...results.map(r => parseFloat(r.percentage)));
+      }
+      document.getElementById("statAverage").textContent = results.length ? avg.toFixed(1) + "%" : "—";
+      document.getElementById("statBest").textContent = results.length ? best.toFixed(1) + "%" : "—";
+
+      const body = document.getElementById("resultsBody");
+      if (!results.length) {
+        body.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="em-icon">▦</div><h4>No attempts yet</h4><p>Take your first quiz to see results here.</p></div></td></tr>`;
+      } else {
+        body.innerHTML = results.slice(-5).reverse().map(r => {
+          const pct = parseFloat(r.percentage);
+          const passed = pct >= 40;
+          return `<tr>
+            <td>${QM.escapeHtml(r.quizName)}</td>
+            <td>${r.date}</td>
+            <td>${r.correct}/${r.total}</td>
+            <td>${pct.toFixed(1)}%</td>
+            <td><span class="badge ${passed ? "pass" : "fail"}">${passed ? "Passed" : "Failed"}</span></td>
+            <td><a href="my-results.html" class="btn btn-ghost btn-sm">View</a></td>
+          </tr>`;
+        }).join("");
+      }
+    } catch (err) {
+      QM.toast("Could not load dashboard data from the server.", "error");
+    }
+  })();
+}
+</script>
+</body>
+</html>

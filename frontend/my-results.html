@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Results — QuizMaster</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app-shell">
+  <aside class="sidebar">
+    <a href="student-dashboard.html" class="brand"><span class="brand-mark">Q</span> QuizMaster</a>
+    <div class="sidebar-role">Student Panel</div>
+    <ul class="side-nav">
+      <li><a href="student-dashboard.html"><span class="ic">▤</span> Dashboard</a></li>
+      <li><a href="quiz.html"><span class="ic">✎</span> Take Quiz</a></li>
+      <li><a href="my-results.html" class="active"><span class="ic">▦</span> My Results</a></li>
+      <li><a href="student-dashboard.html#profile"><span class="ic">●</span> Profile</a></li>
+    </ul>
+    <div class="sidebar-foot">
+      <a href="#" data-logout style="display:flex; align-items:center; gap:10px; padding:11px 14px; color:rgba(247,244,236,0.72); font-size:14.5px;">
+        <span class="ic">⏻</span> Logout
+      </a>
+    </div>
+  </aside>
+
+  <div class="main-col">
+    <header class="topbar">
+      <div style="display:flex; align-items:center; gap:14px;">
+        <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+        <h2>My Results</h2>
+      </div>
+      <div class="topbar-right">
+        <div class="user-chip"><div class="avatar" id="avatarInit">S</div><span class="uname" id="studentNameChip">Student</span></div>
+      </div>
+    </header>
+
+    <main class="content">
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Quiz History</h3>
+          <a href="quiz.html" class="btn btn-gold btn-sm">Take a Quiz</a>
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Quiz Name</th><th>Date</th><th>Total Questions</th><th>Score</th><th>Percentage</th><th>Result</th></tr></thead>
+            <tbody id="resultsBody">
+              <tr><td colspan="6"><div class="skeleton" style="height:18px;"></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="js/script.js"></script>
+<script>
+const student = QM.auth.requireStudent();
+
+if (student) {
+  document.getElementById("studentNameChip").textContent = student.name;
+  document.getElementById("avatarInit").textContent = student.name.charAt(0).toUpperCase();
+
+  (async () => {
+    try {
+      const results = await QM.apiGet("get_results", { username: student.username });
+      const body = document.getElementById("resultsBody");
+      if (!results.length) {
+        body.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="em-icon">▦</div><h4>No quiz history yet</h4><p>Your attempts will appear here once you take a quiz.</p></div></td></tr>`;
+        return;
+      }
+      body.innerHTML = results.slice().reverse().map(r => {
+        const pct = parseFloat(r.percentage);
+        const passed = pct >= 40;
+        return `<tr>
+          <td>${QM.escapeHtml(r.quizName)}</td>
+          <td>${r.date}</td>
+          <td>${r.total}</td>
+          <td>${r.correct}/${r.total}</td>
+          <td>${pct.toFixed(1)}%</td>
+          <td><span class="badge ${passed ? "pass" : "fail"}">${passed ? "Passed" : "Failed"}</span></td>
+        </tr>`;
+      }).join("");
+    } catch (err) {
+      QM.toast("Could not load your results from the server.", "error");
+    }
+  })();
+}
+</script>
+</body>
+</html>

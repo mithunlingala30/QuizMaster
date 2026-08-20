@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Students — QuizMaster</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app-shell">
+  <aside class="sidebar">
+    <a href="admin-dashboard.html" class="brand"><span class="brand-mark">Q</span> QuizMaster</a>
+    <div class="sidebar-role">Admin Panel</div>
+    <ul class="side-nav">
+      <li><a href="admin-dashboard.html"><span class="ic">▤</span> Dashboard</a></li>
+      <li><a href="manage-questions.html"><span class="ic">▦</span> Manage Questions</a></li>
+      <li><a href="add-question.html"><span class="ic">✎</span> Add Question</a></li>
+      <li><a href="students.html" class="active"><span class="ic">◐</span> Students</a></li>
+      <li><a href="admin-results.html"><span class="ic">📈</span> Results</a></li>
+    </ul>
+    <div class="sidebar-foot">
+      <a href="#" data-logout style="display:flex; align-items:center; gap:10px; padding:11px 14px; color:rgba(247,244,236,0.72); font-size:14.5px;"><span class="ic">⏻</span> Logout</a>
+    </div>
+  </aside>
+
+  <div class="main-col">
+    <header class="topbar">
+      <div style="display:flex; align-items:center; gap:14px;"><button class="menu-toggle">☰</button><h2>Students</h2></div>
+      <div class="topbar-right"><span style="font-size:13.5px; color:var(--neutral);" id="countLabel"></span></div>
+    </header>
+
+    <main class="content">
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Registered Students</h3>
+          <input type="text" id="searchBox" placeholder="Search by name or username…" style="padding:9px 14px; border:1.5px solid var(--border-dark); border-radius:999px; font-size:13.5px; width:240px;">
+        </div>
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Student ID</th><th>Name</th><th>Email</th><th>Username</th><th>Quiz Attempts</th><th>Average Score</th></tr></thead>
+            <tbody id="sBody"><tr><td colspan="6"><div class="skeleton" style="height:18px;"></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="js/script.js"></script>
+<script>
+let allStudents = [];
+
+function render(list) {
+  const body = document.getElementById("sBody");
+  document.getElementById("countLabel").textContent = `${list.length} student${list.length === 1 ? "" : "s"}`;
+  if (!list.length) {
+    body.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="em-icon">◐</div><h4>No students found</h4></div></td></tr>`;
+    return;
+  }
+  body.innerHTML = list.map(s => `
+    <tr>
+      <td>${s.studentId}</td>
+      <td>${QM.escapeHtml(s.name)}</td>
+      <td>${QM.escapeHtml(s.email)}</td>
+      <td>${QM.escapeHtml(s.username)}</td>
+      <td>${s.attempts}</td>
+      <td>${s.attempts > 0 ? parseFloat(s.average).toFixed(1) + "%" : "—"}</td>
+    </tr>`).join("");
+}
+
+if (QM.auth.requireAdmin()) {
+  (async () => {
+    try {
+      allStudents = await QM.apiGet("get_students");
+      render(allStudents);
+    } catch (err) {
+      QM.toast("Could not load students from the server.", "error");
+    }
+  })();
+
+  document.getElementById("searchBox").addEventListener("input", (e) => {
+    const term = e.target.value.toLowerCase();
+    render(allStudents.filter(s => s.name.toLowerCase().includes(term) || s.username.toLowerCase().includes(term)));
+  });
+}
+</script>
+</body>
+</html>

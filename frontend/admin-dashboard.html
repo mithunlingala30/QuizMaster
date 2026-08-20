@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Dashboard — QuizMaster</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app-shell">
+  <aside class="sidebar">
+    <a href="admin-dashboard.html" class="brand"><span class="brand-mark">Q</span> QuizMaster</a>
+    <div class="sidebar-role">Admin Panel</div>
+    <ul class="side-nav">
+      <li><a href="admin-dashboard.html"><span class="ic">▤</span> Dashboard</a></li>
+      <li><a href="manage-questions.html"><span class="ic">▦</span> Manage Questions</a></li>
+      <li><a href="add-question.html"><span class="ic">✎</span> Add Question</a></li>
+      <li><a href="students.html"><span class="ic">◐</span> Students</a></li>
+      <li><a href="admin-results.html"><span class="ic">📈</span> Results</a></li>
+      <li><a href="admin-dashboard.html#stats"><span class="ic">◒</span> Statistics</a></li>
+      <li><a href="admin-dashboard.html#settings"><span class="ic">⚙</span> Settings</a></li>
+    </ul>
+    <div class="sidebar-foot">
+      <a href="#" data-logout style="display:flex; align-items:center; gap:10px; padding:11px 14px; color:rgba(247,244,236,0.72); font-size:14.5px;">
+        <span class="ic">⏻</span> Logout
+      </a>
+    </div>
+  </aside>
+
+  <div class="main-col">
+    <header class="topbar">
+      <div style="display:flex; align-items:center; gap:14px;">
+        <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+        <h2>Admin Dashboard</h2>
+      </div>
+      <div class="topbar-right">
+        <div class="user-chip"><div class="avatar">A</div><span class="uname">Admin</span></div>
+        <a href="#" data-logout class="btn btn-outline btn-sm">Logout</a>
+      </div>
+    </header>
+
+    <main class="content">
+      <div class="stat-grid">
+        <div class="stat-card"><div class="stat-label">Total Questions</div><div class="stat-value" id="statQuestions">–</div></div>
+        <div class="stat-card"><div class="stat-label">Total Students</div><div class="stat-value" id="statStudents">–</div></div>
+        <div class="stat-card"><div class="stat-label">Total Quiz Attempts</div><div class="stat-value gold" id="statAttempts">–</div></div>
+        <div class="stat-card"><div class="stat-label">Average Score</div><div class="stat-value success" id="statAverage">–</div></div>
+      </div>
+
+      <div class="grid-2" id="stats">
+        <div class="panel">
+          <div class="panel-head"><h3>Average Score by Student</h3></div>
+          <div class="bar-chart" id="chartStudents"></div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>Score Distribution</h3></div>
+          <div class="bar-chart" id="chartDistribution"></div>
+        </div>
+      </div>
+
+      <div class="panel" id="settings">
+        <div class="panel-head"><h3>Settings</h3></div>
+        <p style="color:var(--neutral); font-size:14.5px;">Admin credentials are stored server-side in <code>data/admin.txt</code> and are never exposed to the browser. For this college demo, passwords are stored as plain text for simplicity — a production system should use a hashed password scheme (e.g. bcrypt) instead.</p>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script src="js/script.js"></script>
+<script>
+if (QM.auth.requireAdmin()) {
+  (async () => {
+    try {
+      const [questions, students, results] = await Promise.all([
+        QM.apiGet("get_questions", { admin: 1 }),
+        QM.apiGet("get_students"),
+        QM.apiGet("get_results")
+      ]);
+
+      document.getElementById("statQuestions").textContent = questions.length;
+      document.getElementById("statStudents").textContent = students.length;
+      document.getElementById("statAttempts").textContent = results.length;
+      const avg = results.length ? results.reduce((s, r) => s + parseFloat(r.percentage), 0) / results.length : 0;
+      document.getElementById("statAverage").textContent = results.length ? avg.toFixed(1) + "%" : "—";
+
+      // Chart 1: average score per student (only students who attempted)
+      const attempted = students.filter(s => s.attempts > 0);
+      const chart1 = document.getElementById("chartStudents");
+      chart1.innerHTML = attempted.length ? attempted.map(s => `
+        <div class="bar-col">
+          <div class="bv">${parseFloat(s.average).toFixed(0)}%</div>
+          <div class="bar" style="height:${Math.max(4, s.average)}%; background:var(--gold);"></div>
+          <div class="bl">${QM.escapeHtml(s.username)}</div>
+        </div>`).join("") : `<p style="color:var(--neutral); font-size:14px;">No attempts recorded yet.</p>`;
+
+      // Chart 2: score distribution buckets
+      const buckets = { Excellent: 0, Good: 0, "Needs Work": 0 };
+      results.forEach(r => {
+        const p = parseFloat(r.percentage);
+        if (p >= 85) buckets.Excellent++; else if (p >= 60) buckets.Good++; else buckets["Needs Work"]++;
+      });
+      const maxB = Math.max(1, ...Object.values(buckets));
+      const colors = { Excellent: "var(--success)", Good: "var(--gold)", "Needs Work": "var(--error)" };
+      const chart2 = document.getElementById("chartDistribution");
+      chart2.innerHTML = results.length ? Object.entries(buckets).map(([label, val]) => `
+        <div class="bar-col">
+          <div class="bv">${val}</div>
+          <div class="bar" style="height:${(val / maxB) * 100}%; background:${colors[label]};"></div>
+          <div class="bl">${label}</div>
+        </div>`).join("") : `<p style="color:var(--neutral); font-size:14px;">No results recorded yet.</p>`;
+    } catch (err) {
+      QM.toast("Could not load dashboard data from the server.", "error");
+    }
+  })();
+}
+</script>
+</body>
+</html>
