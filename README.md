@@ -1,364 +1,291 @@
-# QuizMaster — Online Quiz Management System
+<div align="center">
 
-A full-stack online quiz platform built to demonstrate **C file handling** in a
-real, working web application: HTML/CSS/JS on the frontend, plain **C
-programs run as CGI scripts** on the backend, and **flat `.txt` files** as
-the entire data store — no database, no PHP/Python/Node/Java, no Firebase.
+# 🎯 QuizMaster
+### *High-Performance Online Quiz & Assessment Engine Built with Pure C & CGI*
+
+[![C99](https://img.shields.io/badge/Language-C99-00599C?style=for-the-badge&logo=c&logoColor=white)](https://en.wikipedia.org/wiki/C99)
+[![Web](https://img.shields.io/badge/Frontend-HTML5%20%7C%20CSS3%20%7C%20JS-E34F26?style=for-the-badge&logo=html5&logoColor=white)](https://developer.mozilla.org/)
+[![CGI](https://img.shields.io/badge/Architecture-CGI%20Binaries-blueviolet?style=for-the-badge)](https://en.wikipedia.org/wiki/Common_Gateway_Interface)
+[![Storage](https://img.shields.io/badge/Data%20Store-Flat%20File%20(Pipe--Delimited)-success?style=for-the-badge)](https://en.wikipedia.org/wiki/Flat-file_database)
+[![FastAPI](https://img.shields.io/badge/Dev%20Server-FastAPI%20%7C%20Uvicorn-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey?style=for-the-badge)](https://github.com)
+
+<br>
+
+**A full-stack, zero-external-database assessment platform demonstrating low-level systems programming, real-world C file handling, and browser-to-native CGI bridging.**
+
+[Key Features](#-key-features) • [System Architecture](#-system-architecture) • [File Handling Deep-Dive](#-c-file-handling-implementation) • [Quick Start](#-quick-start--how-to-run) • [Project Structure](#-project-structure) • [Demo Credentials](#-demo-credentials)
 
 ---
 
-## 1. Project Introduction
+</div>
 
-QuizMaster lets students register, log in, attempt multiple-choice quizzes,
-and immediately see a graded result with a full answer breakdown. An
-administrator can log in separately to add, edit, and delete questions, and
-to review every student's performance. Every piece of data — accounts,
-questions, and scores — is stored and manipulated using the standard C
-`<stdio.h>` file functions (`fopen`, `fclose`, `fread`, `fwrite`, `fprintf`,
-`fscanf`, `fgets`, `fputs`, `fseek`, `rewind`).
+## 📌 1. Project Overview
 
-## 2. Objectives
+**QuizMaster** is an online examination and assessment management system created to demonstrate real-world systems programming concepts. Unlike conventional web applications that rely on heavy database engines (SQL/NoSQL) and modern runtime interpreters (Node/Python/PHP), QuizMaster is powered by **pure, compiled C programs operating as Common Gateway Interface (CGI) binaries** interacting directly with **pipe-delimited flat `.txt` files**.
 
-- Demonstrate practical, real-world use of C file handling (not toy examples).
-- Build a CGI bridge between a browser frontend and native C programs.
-- Implement full CRUD (create, read, update, delete) on flat files.
-- Calculate and store quiz scores entirely on the server, never trusting the client.
-- Produce a project simple enough for a B.Tech student to compile, run, and explain in a viva.
+### 🌟 Why This Project Stands Out (Hackathon Highlights)
+* **Zero Heavy Dependencies:** No MySQL, Postgres, MongoDB, or Redis required.
+* **Low-Level Native Performance:** Backend logic runs at compiled native C speeds.
+* **Pure Systems-Level Persistence:** Complete CRUD engine implemented strictly with standard C library file-handling APIs (`<stdio.h>`).
+* **Server-Side Truth:** All validation, authentication, scoring, and percentage calculations occur strictly server-side in C to prevent client tampering.
+* **Dual Runtime Modes:** Includes native C CGI binaries for production/evaluations and an instant zero-config FastAPI dev-server for cross-platform live demonstrations.
 
-## 3. Features
+---
 
-**Student:** registration, login, quiz selection, timed quiz attempt with a
-question navigator, instant scoring, detailed answer review, and a personal
-results history.
+## ✨ 2. Key Features
 
-**Admin:** secure separate login, dashboard with live statistics and charts,
-add/edit/delete questions, view all registered students with computed
-performance, and search/filter/sort all quiz results.
+<table>
+  <tr>
+    <th width="50%">👨‍🎓 Student Portal</th>
+    <th width="50%">👨‍💼 Admin & Management Portal</th>
+  </tr>
+  <tr>
+    <td>
+      <ul>
+        <li><b>Self Registration & Auth:</b> Unique username validation with record scanning in C.</li>
+        <li><b>Interactive Student Dashboard:</b> Overview of recent attempts, total quizzes taken, and average score.</li>
+        <li><b>Timed Quiz Engine:</b> Dynamic question navigator, active status tracking, and countdown timer.</li>
+        <li><b>Instant Server-Side Grading:</b> Automatic score evaluation, percentage calculation, and pass/fail analysis.</li>
+        <li><b>Detailed Answer Review:</b> Breakdown of chosen answers vs. correct answers with explanations.</li>
+        <li><b>Performance History:</b> Filterable log of past attempts stored permanently in <code>scores.txt</code>.</li>
+      </ul>
+    </td>
+    <td>
+      <ul>
+        <li><b>Dedicated Secure Admin Gateway:</b> Isolated administrative authentication via <code>admin.txt</code>.</li>
+        <li><b>Live Analytics Dashboard:</b> Real-time statistics, aggregate performance metrics, and CSS bar charts.</li>
+        <li><b>Full Question Bank CRUD:</b>
+          <ul>
+            <li>Add new questions with multi-option inputs.</li>
+            <li>In-place edit existing questions via temporary file swap.</li>
+            <li>Delete questions with atomic file re-indexing.</li>
+          </ul>
+        </li>
+        <li><b>Student Performance Registry:</b> Cross-table aggregation linking registered users with quiz scores.</li>
+        <li><b>Comprehensive Result Search & Filter:</b> Search results by student, quiz title, date, or score tier.</li>
+      </ul>
+    </td>
+  </tr>
+</table>
 
-## 4. Technologies Used
+---
 
-| Layer            | Technology                                   |
-|-------------------|-----------------------------------------------|
-| Frontend          | HTML5, CSS3, vanilla JavaScript (no framework) |
-| Backend           | C (C99), compiled as CGI executables          |
-| Web/CGI server    | Apache HTTP Server with `mod_cgi` (or any CGI-capable server) |
-| Data storage      | Pipe-delimited `.txt` files, read/written with C file handling |
-
-## 5. System Architecture
+## 🏗️ 3. System Architecture & Request Lifecycle
 
 ```
-Browser (HTML/CSS/JS)
-        │  fetch() → application/x-www-form-urlencoded / query string
-        ▼
-Web server (Apache) → /cgi-bin/
-        │  runs the compiled C binary as a subprocess
-        ▼
-C CGI program (e.g. student_login)
-        │  fopen()/fread()/fwrite() on data/*.txt
-        ▼
-Flat file data store (data/users.txt, questions.txt, scores.txt, admin.txt)
-        │
-        ▼
-C program prints a JSON string to stdout
-        │
-        ▼
-Web server relays stdout back as the HTTP response
-        │
-        ▼
-Browser JS parses the JSON and updates the page
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           Client Browser                                │
+│          (HTML5 / CSS3 / Vanilla JS - UI, State, Modals & Toast)        │
+└────────────────────────────────────┬────────────────────────────────────┘
+                                     │ HTTP Request (Fetch API)
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    Web / CGI Gateway Server                             │
+│       (Apache mod_cgi / Python CGI Server / FastAPI Dev Server)         │
+└────────────────────────────────────┬────────────────────────────────────┘
+                                     │ Spawns C Binary Subprocess
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                     Compiled Native C Programs                          │
+│     (student_login, add_question, submit_quiz, get_results, etc.)       │
+│                                                                         │
+│  • Reads QUERY_STRING or stdin (CGI standard)                           │
+│  • Parses payload via backend/common.h helpers                          │
+│  • Performs file ops (fopen, fgets, fprintf, fputs, rename)             │
+│  • Formats response & streams Content-Type: application/json to stdout   │
+└────────────────────────────────────┬────────────────────────────────────┘
+                                     │ Low-level Disk I/O
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    Flat File Data Store (data/*.txt)                    │
+│   users.txt  │  admin.txt  │  questions.txt  │  scores.txt  │  temp.txt │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
-## 6. Frontend Architecture
+---
 
-Fourteen static HTML pages share one stylesheet (`css/style.css`) and one
-script (`js/script.js`):
+## 💾 4. Data Storage & Schema Format
 
-- `index.html` — landing page
-- `register.html`, `login.html` — student auth
-- `student-dashboard.html` — student home, stats, recent results
-- `quiz.html` — quiz selection **and** the timed quiz attempt UI (two views in one page)
-- `result.html` — score summary + toggleable detailed answer review
-- `my-results.html` — student's full quiz history
-- `admin-login.html` — admin auth
-- `admin-dashboard.html` — admin stats + CSS-based bar charts
-- `manage-questions.html`, `add-question.html`, `edit-question.html` — question CRUD
-- `students.html` — registered students + computed performance
-- `admin-results.html` — all results with search/filter/sort
+All data is structured as flat, human-readable, pipe-delimited (`|`) text files, allowing fast line-by-line scanning and constant-memory streaming:
 
-`js/script.js` centralizes API calls (`QM.api` / `QM.apiGet`), a
-localStorage-based "session-like" login state (`QM.auth`), toasts, and a
-reusable confirmation modal, so every page only contains the logic specific
-to itself.
+| File | Purpose | Schema / Field Layout |
+| :--- | :--- | :--- |
+| `data/users.txt` | Student Records | `studentId \| name \| email \| username \| password` |
+| `data/admin.txt` | Admin Credentials | `username \| password` |
+| `data/questions.txt` | Question Bank | `id \| question \| optionA \| optionB \| optionC \| optionD \| correctAnswer \| category \| difficulty \| marks` |
+| `data/scores.txt` | Quiz Submissions | `username \| quizName \| date \| totalQuestions \| correctAnswers \| percentage` |
+| `data/temp.txt` | Atomic File Swaps | *Temporary buffer file used during update and delete operations* |
 
-## 7. C Backend Architecture
+---
 
-Each backend file is a standalone CGI program compiled to its own
-executable. `backend/common.h` centralizes the shared `struct` definitions
-and helper functions (CGI form parsing, JSON escaping, file-line splitting)
-so the file-handling logic isn't duplicated ten times:
+## ⚙️ 5. C File Handling Implementation
 
-| Program              | Purpose                                              |
-|-----------------------|-------------------------------------------------------|
-| `student_register.c`  | Validates + appends a new student to `users.txt`      |
-| `student_login.c`     | Authenticates a student against `users.txt`           |
-| `admin_login.c`       | Authenticates the admin against `admin.txt`           |
-| `add_question.c`      | Appends a new question to `questions.txt`             |
-| `edit_question.c`     | Rewrites `questions.txt` with one record updated       |
-| `delete_question.c`   | Rewrites `questions.txt` with one record removed        |
-| `get_questions.c`     | Reads and returns all questions as JSON                |
-| `submit_quiz.c`       | Grades answers against `questions.txt`, appends `scores.txt` |
-| `get_results.c`       | Reads and returns quiz results (optionally filtered)    |
-| `get_students.c`      | Joins `users.txt` and `scores.txt` into a student report |
+QuizMaster exercises all fundamental C file-handling operations required for low-level systems programming:
 
-## 8. File Handling Implementation
+| Operation | C Standard Function | Implementation Details & Usage in Project |
+| :--- | :--- | :--- |
+| **File Opening** | `fopen(path, mode)` | Used in `"r"` (read), `"a"` (append), and `"w"` (overwrite/temp) modes across all 10 CGI programs. |
+| **Safe Closing** | `fclose(fp)` | Deterministically called after every I/O transaction to prevent file lockups and descriptor leaks. |
+| **Record Streaming** | `fgets(buffer, size, fp)` | Safely reads records line-by-line with bounded buffers to prevent buffer overflow vulnerabilities. |
+| **Formatted Write** | `fprintf(fp, format, ...)` | Writes structured, pipe-delimited records in `student_register.c`, `add_question.c`, and `submit_quiz.c`. |
+| **ID Parsing** | `fscanf(fp, ...)` / `sscanf(...)` | Extracts sequential numeric IDs and separates pipe-delimited tokens from text buffers. |
+| **Direct Copying** | `fputs(str, fp)` | Streams unmodified lines through into `temp.txt` during editing or deletion cycles. |
+| **Atomic Replace** | `remove()` & `rename()` | Standard industry pattern for flat-file record modification: writes output to `temp.txt`, deletes the original, and renames the temporary file into place. |
 
-This project deliberately exercises every file mode and function requested
-for the assignment:
+---
 
-| Function      | Where it's used                                                        |
-|----------------|--------------------------------------------------------------------------|
-| `fopen()`      | Every program — opens `.txt` files in `"r"`, `"a"`, or `"w"` mode        |
-| `fclose()`     | Immediately after each read/write block                                  |
-| `fprintf()`    | Writing pipe-delimited records (`add_question.c`, `student_register.c`, `submit_quiz.c`) |
-| `fscanf()`     | Extracting a leading numeric ID from a line (`add_question.c`, `edit_question.c`) |
-| `fgets()`      | Line-by-line reads of every data file                                     |
-| `fputs()`      | Copying unmodified lines through during update/delete (`edit_question.c`, `delete_question.c`) |
-| `sscanf()`     | Parsing fields out of a buffered line                                     |
-| `remove()` / `rename()` | The classic "update a text file" pattern: write a full replacement to `temp.txt`, delete the original, rename the temp file into place |
-
-**File modes demonstrated:** `"r"` (read-only scans for auth/reporting),
-`"a"` (append-only writes for registration/new questions/new scores), and
-`"w"` (used on `temp.txt` while rebuilding `questions.txt` during edit/delete).
-
-## 9. File Structure
+## 📂 6. Project Structure
 
 ```
 QuizMaster/
-├── frontend/
-│   ├── index.html, login.html, register.html, student-dashboard.html,
-│   │   quiz.html, result.html, my-results.html, admin-login.html,
-│   │   admin-dashboard.html, manage-questions.html, add-question.html,
-│   │   edit-question.html, students.html, admin-results.html
-│   ├── css/style.css
-│   └── js/script.js
-├── backend/
-│   ├── common.h
-│   ├── student_login.c, student_register.c, admin_login.c
-│   ├── add_question.c, edit_question.c, delete_question.c
-│   ├── get_questions.c, submit_quiz.c, get_results.c, get_students.c
-├── data/
-│   ├── users.txt, admin.txt, questions.txt, scores.txt, temp.txt
-└── README.md
+│
+├── frontend/                     # Modern Vanilla Web Interface
+│   ├── css/
+│   │   └── style.css             # Unified Responsive Design System & Dark Accents
+│   ├── js/
+│   │   └── script.js             # API Client, State Manager, Toasts & Modals
+│   ├── index.html                # Project Landing & Entry Page
+│   ├── login.html                # Student Authentication
+│   ├── register.html             # Student Account Creation
+│   ├── student-dashboard.html    # Student Overview & Performance
+│   ├── quiz.html                 # Dynamic Timed Quiz Engine
+│   ├── result.html               # Graded Scorecard & Review Breakdown
+│   ├── my-results.html           # Historical Results for Student
+│   ├── admin-login.html          # Admin Portal Gateway
+│   ├── admin-dashboard.html      # Admin Live Metrics & Visual Charts
+│   ├── manage-questions.html     # Question Bank Management Table
+│   ├── add-question.html         # Question Creator Interface
+│   ├── edit-question.html        # Question Editor Interface
+│   ├── students.html             # Registered Student Directory & Statistics
+│   └── admin-results.html        # Global Result Search & Filtering Hub
+│
+├── backend/                      # Pure C CGI Source Code
+│   ├── common.h                  # Shared structs, CGI parser, JSON escape, path resolver
+│   ├── student_register.c        # Handles student registration & duplicate checks
+│   ├── student_login.c           # Student authentication against users.txt
+│   ├── admin_login.c             # Admin authentication against admin.txt
+│   ├── add_question.c            # Appends questions to questions.txt
+│   ├── edit_question.c           # Atomic record modifier using temp file swap
+│   ├── delete_question.c         # Record remover using temp file swap
+│   ├── get_questions.c           # JSON question provider
+│   ├── submit_quiz.c             # Server-side quiz evaluation and score recorder
+│   ├── get_results.c             # Result queries with student/filter options
+│   └── get_students.c            # User-Score join aggregation engine
+│
+├── data/                         # Persistent Flat File Database
+│   ├── users.txt                 # Stored student credentials and profiles
+│   ├── admin.txt                 # Admin authentication record
+│   ├── questions.txt             # Preloaded question bank
+│   └── scores.txt                # Logged quiz submissions
+│
+├── dev-server/                   # Instant Dev & Demo Server (FastAPI)
+│   ├── app.py                    # Endpoint replica executing identical flat-file logic
+│   └── requirements.txt          # Python dev dependencies (FastAPI, Uvicorn)
+│
+└── README.md                     # Comprehensive Project Documentation
 ```
 
-## 10. Data Formats
+---
 
-All files are pipe (`|`) delimited, one record per line.
+## 🚀 7. Quick Start & How to Run
 
+You can run QuizMaster using any of the following setups:
+
+### 🔹 Option A: Instant Live Demo (Recommended for Windows / Fast Hackathon Demo)
+Uses the lightweight FastAPI dev server (replicates the exact C CGI routes and reads/writes the same `data/*.txt` files):
+
+```powershell
+# 1. Navigate to dev-server directory
+cd dev-server
+
+# 2. Install dependencies
+python -m pip install -r requirements.txt
+
+# 3. Start the server
+python -m uvicorn app:app --reload --port 8000
 ```
-data/users.txt      studentId|name|email|username|password
-data/admin.txt      username|password
-data/questions.txt  id|question|optionA|optionB|optionC|optionD|correctAnswer|category|difficulty|marks
-data/scores.txt     username|quizName|date|totalQuestions|correctAnswers|percentage
-```
+👉 Open your browser at **[http://localhost:8000/index.html](http://localhost:8000/index.html)**.
 
-## 11. How CGI Works Here
+---
 
-The browser sends a normal HTTP request (`GET` with a query string, or
-`POST` with an `application/x-www-form-urlencoded` body) to a URL under
-`/cgi-bin/`. Apache runs the matching compiled C binary as a child process:
-
-- **GET** parameters arrive in the `QUERY_STRING` environment variable.
-- **POST** bodies arrive on `stdin`, with their length in the
-  `CONTENT_LENGTH` environment variable.
-- Every program's *first* output must be an HTTP header block, so each one
-  starts with `print_json_header()` → `Content-Type: application/json\r\n\r\n`.
-- Everything printed after that becomes the HTTP response body — in this
-  project, a JSON string the frontend `fetch()` call parses directly.
-
-## 12. How to Compile the C Programs
-
-From inside `backend/`:
+### 🔹 Option B: Native C CGI via Python Built-in Server (Linux / macOS / WSL)
+Executes the actual compiled C binaries directly:
 
 ```bash
-gcc -o student_register.cgi student_register.c
-gcc -o student_login.cgi    student_login.c
-gcc -o admin_login.cgi      admin_login.c
-gcc -o add_question.cgi     add_question.c
-gcc -o edit_question.cgi    edit_question.c
-gcc -o delete_question.cgi  delete_question.c
-gcc -o get_questions.cgi    get_questions.c
-gcc -o submit_quiz.cgi      submit_quiz.c
-gcc -o get_results.cgi      get_results.c
-gcc -o get_students.cgi     get_students.c
-```
-
-Or compile all at once:
-
-```bash
-cd backend && for f in *.c; do gcc -o "${f%.c}.cgi" "$f"; done
-```
-
-Every program has already been compiled and smoke-tested against the sample
-data in this project (registration, login, add/edit/delete question, quiz
-submission and scoring, and reporting all verified end-to-end) — including a
-real run through both Apache-style CGI and Python's built-in test server
-(see Section 14A below).
-
-**A note on file paths:** `common.h` defines the data files as `../data/...`
-(relative paths). At the top of every `main()`, `goto_own_directory()` uses
-`/proc/self/exe` to resolve the compiled binary's own real location and
-`chdir()`s there first, so `../data/...` always resolves correctly and
-points at the project's `data/` folder — regardless of which directory the
-web server itself was launched from, or what working directory it hands to
-the CGI process. This matters because different CGI-capable servers behave
-differently here (Apache's `mod_cgi` changes into the script's directory
-automatically; Python's simple test server does not).
-
-## 13. How to Configure the Web Server (Apache example)
-
-1. Copy the compiled `.cgi` binaries into Apache's `cgi-bin` directory
-   (e.g. `/usr/lib/cgi-bin/` on Debian/Ubuntu), **renaming each to match the
-   endpoint names used in `js/script.js`** — e.g. `student_login.cgi` should
-   be reachable as `/cgi-bin/student_login`. The simplest approach is to
-   enable `mod_cgid`/`mod_cgi` and drop the binaries in without a file
-   extension, e.g. `student_login` instead of `student_login.cgi`.
-2. Make sure the `data/` folder is writable by the user Apache runs as
-   (`www-data` on most distros): `chmod -R 664 data/*.txt && chown -R www-data data/`.
-3. Because `common.h` uses relative paths (`../data/users.txt`), the CGI
-   binaries must be run from a working directory one level above `data/` —
-   in practice this means placing `cgi-bin/` and `data/` as siblings, matching
-   this project's folder layout, or adjusting the `#define ..._FILE` paths
-   in `common.h` to absolute paths for your server.
-4. Serve `frontend/` as the site's document root (e.g. Apache's `htdocs` or
-   `/var/www/html`).
-
-## 14. How to Run the Project
-
-> **Two ways to run this, for different purposes:**
-> - **`backend/` (C/CGI)** — this is the real project. It's what demonstrates
->   C file handling and what you submit/present/explain in your viva.
-> - **`dev-server/` (FastAPI)** — a Python stand-in that exposes the exact
->   same routes, request fields, and JSON responses as the C programs, and
->   reads/writes the exact same `data/*.txt` files. It exists purely so you
->   can click through the whole frontend on Windows without installing gcc
->   or WSL — e.g. while designing pages, or demoing the UI quickly. **It is
->   not a replacement for the C backend and should not be presented as the
->   project itself.** Data is fully compatible either way: register a
->   student via one backend, log in against the other, no conversion needed.
-
-### 14A. Fastest option for testing on your own laptop (no Apache install)
-
-This is the quickest way to see the whole thing working, verified end-to-end:
-
-```bash
-# 1. Build one folder that mirrors the deployed layout
+# 1. Prepare runtime directory structure
 mkdir -p run/cgi-bin run/data
 cp frontend/*.html run/
 cp -r frontend/css frontend/js run/
 cp data/*.txt run/data/
 
-# 2. Compile every backend program straight into cgi-bin/
+# 2. Compile all C backend programs into cgi-bin
 cd backend
-for f in *.c; do gcc -o ../run/cgi-bin/${f%.c} "$f"; done
+for f in *.c; do gcc -o "../run/cgi-bin/${f%.c}" "$f"; done
 chmod +x ../run/cgi-bin/*
 cd ..
 
-# 3. Start Python's built-in CGI-capable web server
+# 3. Launch Python's CGI-capable server
 cd run
 python3 -m http.server 8000 --cgi
 ```
-
-Then open **http://localhost:8000/index.html** in a browser. Login, quiz
-attempt, admin question management, etc. all work against the real C
-backend and the real `.txt` files in `run/data/`.
-
-(Requires only `gcc` and `python3`, both already on most Linux/macOS
-systems and available in WSL on Windows.)
-
-### 14C. Fastest option on Windows without WSL (FastAPI dev-server)
-
-If you're on Windows and don't want to set up WSL just to click through the
-UI, run the FastAPI stand-in instead. **Remember: this is for testing only —
-your actual submission is still the C backend in `backend/`.**
-
-```powershell
-cd dev-server
-python -m pip install -r requirements.txt
-python -m uvicorn app:app --reload --port 8000
-```
-
-Then open **http://localhost:8000/index.html**. In VS Code, tasks
-"4. [DEV ONLY] Install FastAPI mock-backend deps" and "5. [DEV ONLY] Run
-FastAPI mock backend" (Terminal > Run Task) do exactly this for you.
-
-### 14B. Production-style option (Apache)
-
-1. Compile the backend (`Section 12`).
-2. Place the compiled binaries in your server's `cgi-bin` and the data files
-   next to them as described in `Section 13`.
-3. Serve `frontend/` as your web root and open `index.html` in a browser.
-4. Register a student (or use a demo account below), log in, and take the
-   sample "C Programming Basics" quiz.
-5. Log in as admin separately to manage questions and view results.
-
-## 15. Sample Login Credentials
-
-| Role    | Username  | Password  |
-|---------|-----------|-----------|
-| Admin   | `admin`   | `admin123`|
-| Student | `student01` | `pass123` |
-| Student | `student02` | `pass123` |
-| Student | `student03` | `pass123` |
-
-10 sample C programming questions covering variables, data types, operators,
-conditionals, loops, functions, arrays, pointers, structures, and file
-handling are pre-loaded in `data/questions.txt`.
-
-## 16. Future Enhancements
-
-- Replace plain-text passwords with a hashed scheme (see security note below).
-- Move from flat files to a lightweight embedded database (e.g. SQLite) while keeping the same C backend structure.
-- Add per-quiz grouping so multiple distinct quizzes can be managed independently instead of one shared question bank.
-- Add real server-side sessions/cookies instead of the client-side "session-like" localStorage state.
-- Add negative marking and partial-credit scoring options.
+👉 Open your browser at **[http://localhost:8000/index.html](http://localhost:8000/index.html)**.
 
 ---
 
-## Why C File Handling?
+### 🔹 Option C: Production Apache Deployment
+1. Compile backend programs into Apache's `cgi-bin` directory:
+   ```bash
+   cd backend
+   for f in *.c; do gcc -o "/usr/lib/cgi-bin/${f%.c}" "$f"; done
+   chmod +x /usr/lib/cgi-bin/*
+   ```
+2. Enable Apache CGI module and configure permissions:
+   ```bash
+   sudo a2enmod cgi
+   sudo chmod -R 664 data/*.txt
+   sudo chown -R www-data:www-data data/
+   ```
+3. Copy `frontend/` contents into your web document root (`/var/www/html/`).
 
-This project exists specifically to put every core C file-handling operation
-to real use, not as an isolated exercise but as the actual persistence layer
-of a working application:
+---
 
-- **File creation** — the first `fopen(path, "a")` call on a fresh install creates `users.txt`/`questions.txt`/`scores.txt` if they don't already exist.
-- **File opening** — every CGI program opens the exact file it needs, in the mode appropriate to what it's doing (`"r"` to read, `"a"` to append, `"w"` to rewrite).
-- **File reading** — `fgets()` streams each `.txt` file line by line for login checks, listing questions, and building reports.
-- **File writing** — `fprintf()` writes new pipe-delimited records for registrations, new questions, and new scores.
-- **File appending** — registration, question creation, and quiz submission all use `"a"` mode so existing records are never disturbed.
-- **File updating** — `edit_question.c` shows the standard C pattern for "editing a line" in a flat file: read the original, write a corrected copy to a temp file, then `remove()` + `rename()` to swap it into place.
-- **File deletion** — `delete_question.c` uses the same read/rewrite/rename pattern, simply omitting the target record instead of replacing it.
-- **Record searching** — `student_login.c`, `admin_login.c`, and `student_register.c`'s uniqueness check all scan a file line-by-line looking for a matching field.
-- **Record modification** — `edit_question.c` demonstrates modifying one specific record identified by its ID while leaving every other record byte-for-byte untouched.
+## 🔑 8. Demo Credentials
 
-## Security Notes
+The system comes pre-populated with test accounts and sample C programming questions:
 
-- Admin credentials live only in `data/admin.txt` on the server and are
-  never referenced by any frontend HTML/JS file.
-- All login and registration checks happen in the C backend — the frontend's
-  client-side validation is a convenience layer only, not a security boundary.
-- **Quiz scores are always calculated server-side.** `submit_quiz.c` re-reads
-  the answer key from `questions.txt` itself; the browser only ever sends
-  which letter the student picked, never whether it was right.
-- User-supplied text is HTML-escaped in the browser (`QM.escapeHtml`) before
-  being inserted into the page, and quote/backslash-escaped in C
-  (`json_escape`) before being embedded in JSON responses.
-- **For this college demonstration, passwords are stored as plain text** in
-  `users.txt`/`admin.txt` to keep the file-handling logic easy to read and
-  explain. A production system should never do this — it should hash
-  passwords (e.g. with bcrypt or a salted SHA-256) before writing them to
-  disk and compare hashes on login instead of raw strings.
-#   Q u i z M a s t e r  
- #   Q u i z M a s t e r  
- #   Q u i z M a s t e r  
- 
+| Portal | Username | Password | Role / Access |
+| :--- | :--- | :--- | :--- |
+| **Admin Portal** | `admin` | `admin123` | Full access to question bank, student records, and analytics. |
+| **Student Portal** | `student01` | `pass123` | Active student account with sample historical results. |
+| **Student Portal** | `student02` | `pass123` | Active student account. |
+| **Student Portal** | `student03` | `pass123` | Active student account. |
+
+*(New student accounts can also be created dynamically via the Registration page).*
+
+---
+
+## 🔒 9. Security & Robustness Highlights
+
+* **Server-Side Grading Integrity:** Answers are graded strictly against `questions.txt` inside `submit_quiz.c`. The client only transmits selected option keys (`A`, `B`, `C`, `D`), preventing any inspect-element or client-side payload manipulation.
+* **Data Sanitization:** Input values are escaped against JSON formatting breaks (`json_escape` in `common.h`) and HTML-escaped on render (`QM.escapeHtml`) to prevent injection flaws.
+* **Isolated Admin Store:** Admin authentication is decoupled into an isolated `admin.txt` file and never exposed to client-side scripts.
+* **Autonomous Path Resolution:** C programs utilize `/proc/self/exe` binary location resolution (`goto_own_directory()`) to ensure consistent relative file path targeting across different web server working directory configurations.
+
+---
+
+## 🔮 10. Future Roadmap
+
+- [ ] Password hashing with `bcrypt` / `argon2` integration in C.
+- [ ] Multi-category quiz partitioning & custom timer configurations.
+- [ ] Anti-cheat tab-switch detection & fullscreen enforcement.
+- [ ] Automated certificate generation (PDF output via C).
+- [ ] CSV/Excel bulk export for administrative reports.
+
+---
+
+<div align="center">
+
+Made with ❤️ for Hackathons & Systems Programming Excellence
+
+</div>
