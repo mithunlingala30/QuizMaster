@@ -359,4 +359,5 @@ of a working application:
   passwords (e.g. with bcrypt or a salted SHA-256) before writing them to
   disk and compare hashes on login instead of raw strings.
 #   Q u i z M a s t e r  
+ #   Q u i z M a s t e r  
  
